@@ -21,18 +21,28 @@ internet, o app funciona offline no palco — ele guarda uma cópia local dos da
 > bloqueia o salvamento — o app avisa com uma tarja. Prefira a URL publicada ou o
 > `servir.sh`.
 
-## Publicar (GitHub Pages)
+## Editar e salvar (do próprio app)
 
-`data/repertorio.json` é a fonte da verdade, versionada no git. Publicar = dar `push`.
+`data/repertorio.json` é a fonte da verdade, versionada no git. O app salva direto lá.
 
-1. Uma vez, no GitHub: **Settings › Pages › Branch: `main` / raiz** e salvar.
-2. Para atualizar as cifras:
-   - edite no app e ⚙︎ › **Exportar repertorio.json**, substituindo o arquivo em `data/`;
-   - **ou** edite `data/repertorio.json` direto;
-   - depois `git add data/repertorio.json && git commit -m "cifras" && git push`.
+1. Edite a parte/cifra (botão ✎).
+2. Toque em **☁️ Salvar** (o botão flutuante que aparece quando há edições) — o app
+   faz o commit no `data/repertorio.json` pela API do GitHub e o site republica em ~1 min.
 
-O site republica sozinho em ~1 min. No iPad, recarregue uma vez com internet para o app
-pegar a versão nova (e atualizar a cópia offline).
+**Configurar uma vez** (⚙︎ › *Conexão com o GitHub*): cole um **token fine-grained** do
+GitHub. Crie em <https://github.com/settings/personal-access-tokens/new>:
+
+- *Resource owner*: sua conta · *Repository access*: **Only select repositories** → `repertorio`
+- *Permissions › Repository › Contents*: **Read and write**
+
+O token fica guardado só no aparelho (localStorage). Dá pra revogar quando quiser na
+mesma página do GitHub. Sem token, dá pra usar ⚙︎ › **Exportar .json** e commitar à mão.
+
+### Publicação (GitHub Pages)
+
+Já configurado: **Settings › Pages › Source: GitHub Actions**. O workflow
+`.github/workflows/deploy.yml` republica a cada push na `main` (o "Salvar" do app é um push).
+No iPad, recarregue uma vez com internet para pegar a versão nova (e atualizar a cópia offline).
 
 ## No palco
 

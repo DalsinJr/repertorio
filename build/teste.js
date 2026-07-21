@@ -2,6 +2,7 @@ const fs=require('fs'); const path=require('path'); const {JSDOM}=require('jsdom
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
 const repertorio=fs.readFileSync(path.join(__dirname,'..','data','repertorio.json'),'utf8');
 let blob=null;
+let ghPut=null; // registra o corpo do PUT enviado ao GitHub
 
 /* localStorage em memória — simula https / GitHub Pages, onde o navegador grava */
 function memLS(){ const m={}; return {
@@ -14,7 +15,13 @@ const baseEnv=extra=>({runScripts:'dangerously',pretendToBeVisual:true,url:'http
     win.URL.createObjectURL=b=>{blob=b;return 'blob:x'};
     win.HTMLAnchorElement.prototype.click=function(){};
     win.confirm=()=>true; win.alert=()=>{};
-    win.fetch=async()=>({ok:true,json:async()=>JSON.parse(repertorio),text:async()=>repertorio});
+    win.fetch=async(u,opts)=>{
+      if(String(u).includes('api.github.com')){
+        if(opts&&opts.method==='PUT'){ ghPut=JSON.parse(opts.body); return {ok:true,status:201,json:async()=>({})}; }
+        return {ok:true,status:200,json:async()=>({sha:'sha123'})};
+      }
+      return {ok:true,json:async()=>JSON.parse(repertorio),text:async()=>repertorio};
+    };
     if(extra) extra(win);
   }});
 const comLS=ls=>baseEnv(win=>Object.defineProperty(win,'localStorage',{configurable:true,get:()=>ls}));
@@ -63,7 +70,7 @@ let pass=true; const ok=(c,m)=>{console.log((c?'  ✅ ':'  ❌ ')+m); if(!c)pass
   const orig=ch(w2,0);
   tap(w2,$2('bTools')); tap(w2,$2('bLimpar'));
   ok(ch(w2,0)!=='XX · YY','após limpar, a parte volta ao repertório oficial');
-  ok(/Tudo publicado/.test($2('pubStatus').innerHTML),'status volta a "tudo publicado"');
+  ok(/Tudo salvo/.test($2('pubStatus').innerHTML),'status volta a "tudo salvo e publicado"');
 
   // ---------- D) file:// (localStorage bloqueado): edita na sessão, avisa ----------
   console.log('\nD) file:// / preview isolado');
@@ -73,6 +80,28 @@ let pass=true; const ok=(c,m)=>{console.log((c?'  ✅ ':'  ❌ ')+m); if(!c)pass
   tap(w3,$3('bEdit')); tap(w3,w3.document.querySelectorAll('#content .sec')[0]);
   $3('fCh').value='ZZ · WW'; tap(w3,$3('secSave'));
   ok(ch(w3,0)==='ZZ · WW','edição funciona na sessão mesmo sem armazenamento');
+
+  // ---------- E) salvar direto no GitHub (commit via API) ----------
+  console.log('\nE) salvar direto no GitHub');
+  ghPut=null;
+  const lsE=memLS();
+  const dE=new JSDOM(html,comLS(lsE)), wE=dE.window, $E=i=>wE.document.getElementById(i);
+  await wait(40);
+  $E('ghToken').value='github_pat_teste'; tap(wE,$E('bTools')); tap(wE,$E('bGhSave'));
+  ok(JSON.parse(lsE.getItem('blackShow_gh')).token==='github_pat_teste','token guardado no aparelho');
+
+  tap(wE,$E('bEdit')); tap(wE,wE.document.querySelectorAll('#content .sec')[0]);
+  $E('fCh').value='QQ · RR'; tap(wE,$E('secSave'));
+  ok($E('savePill').classList.contains('show'),'pill "Salvar" aparece com edição pendente');
+
+  tap(wE,$E('bSalvarGh'));
+  await wait(80);
+  ok(ghPut && typeof ghPut.content==='string','fez PUT no repertorio.json com content base64');
+  const enviado = Buffer.from(ghPut.content,'base64').toString('utf8');
+  ok(enviado.includes('QQ · RR'),'o JSON enviado ao GitHub contém a edição');
+  ok(JSON.parse(enviado).musicas.some(m=>m.bl),'JSON enviado preserva o campo bl');
+  ok(!$E('savePill').classList.contains('show'),'pill some após salvar (rascunho limpo)');
+  ok(ch(wE,0)==='QQ · RR','edição continua na tela após salvar (adotada como base)');
 
   console.log('\n'+(pass?'✅ TODOS OS TESTES PASSARAM':'❌ HÁ FALHAS'));
   process.exit(pass?0:1);

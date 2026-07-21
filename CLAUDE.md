@@ -50,6 +50,12 @@ Este app já quebrou por causa disso. Leia antes de mexer.
   assim nenhum campo (ex.: `bl`) se perde no export. Não volte a listar campo por campo.
 - O botão **🧹 Limpar rascunho** zera `store.cifra/estr/tr`. É o que se usa depois de
   publicar, pra o rascunho local não brigar com uma edição feita direto no JSON.
+- `salvarGitHub()`: GET do arquivo pra pegar o `sha` → PUT com o conteúdo em base64
+  (`b64utf8` cobre acento/Unicode) → em caso de sucesso **adota o commitado como base**
+  (`aplicaDados` + regrava cache) e limpa o rascunho, então a tela não pisca. O deploy do
+  Pages leva ~1 min; nesse intervalo um reload pode mostrar a versão anterior (auto-corrige).
+- O token do GitHub é sensível: fica em `localStorage`, nunca é logado nem renderizado,
+  e vai só pra `api.github.com` por https. Use fine-grained restrito a este repo.
 
 ## Estrutura de pastas
 
@@ -68,12 +74,20 @@ servir.sh               servidor local em http://localhost:8080
 
 ## Editar e publicar (fluxo normal)
 
-Para mudar uma cifra, há dois caminhos — os dois acabam no mesmo lugar:
+Para mudar uma cifra, há três caminhos — todos acabam no mesmo `data/repertorio.json`:
 
-1. **No app**: edita a parte/cifra → ⚙︎ › **Exportar repertorio.json** → substitui o
-   arquivo em `data/` → `git commit && git push`. O GitHub Pages republica sozinho.
-2. **Direto no JSON**: edita `data/repertorio.json` (ou pelo editor web do GitHub) e
+1. **Salvar pelo app (principal)**: edita a parte/cifra → toca **☁️ Salvar** (pill
+   flutuante que aparece com edições pendentes, ou ⚙︎ › Salvar no GitHub). O app faz o
+   commit no `data/repertorio.json` pela **API Contents do GitHub** e o Action republica.
+   Precisa de um token fine-grained (Contents: write) colado uma vez em ⚙︎; fica só no
+   aparelho (`localStorage['blackShow_gh']`). Ver `salvarGitHub()` / `ghCfg()`.
+2. **Exportar + commit à mão**: ⚙︎ › **Exportar .json** → substitui `data/repertorio.json`
+   → `git commit && git push`. Fallback sem token.
+3. **Direto no JSON**: edita `data/repertorio.json` (ou pelo editor web do GitHub) e
    commita. O app lê de lá no próximo carregamento online.
+
+Publicação: GitHub Pages com Source **GitHub Actions** (`.github/workflows/deploy.yml`
+republica a cada push na `main`).
 
 ## Regenerar a partir dos PDFs
 
