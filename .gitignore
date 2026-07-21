@@ -1,0 +1,12 @@
+.DS_Store
+node_modules/
+build/node_modules/
+*.log
+backups/
+build/_full.json
+build/copia.html
+__pycache__/
+*.pyc
+
+# cifras/letras de terceiros (insumo de build, não redistribuir publicamente)
+fontes/*.pdf
