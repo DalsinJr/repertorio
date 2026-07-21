@@ -1,0 +1,42 @@
+name: Publicar no GitHub Pages
+
+# Republica o app a cada push na main. Como data/repertorio.json é a fonte
+# da verdade, publicar uma cifra é só dar push — a Action faz o resto.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}   # permite rodar manualmente pela aba Actions
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# uma publicação por vez; a mais nova cancela a anterior em andamento
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Baixar o repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar o Pages (habilita se ainda não estiver)
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Empacotar o site (raiz do repositório)
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Publicar
+        id: deployment
+        uses: actions/deploy-pages@v4
