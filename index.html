@@ -65,6 +65,13 @@ body.light .chords .bar{color:#c7c7cc}
 .pal{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
 .pal .mini{font-family:ui-monospace,Menlo,monospace;color:var(--acc)}
 .pal .mini.sep{color:var(--dim);font-family:inherit}
+.edin{width:100%;background:var(--panel);color:inherit;border:1px solid var(--line);border-radius:10px;
+ padding:10px 13px;font-size:16px;margin-bottom:9px;outline:none}
+.edin:focus{border-color:var(--acc)}
+.edin.ed-name{font-weight:800;letter-spacing:.08em;text-transform:uppercase;font-size:13px}
+.edin.ed-ch{font-family:ui-monospace,Menlo,monospace;font-weight:800;color:var(--acc);font-size:19px}
+.edin.ed-cue{font-style:italic}
+.ed-pal{margin-top:-2px;margin-bottom:11px}
 .empt{color:var(--dim);line-height:1.7;max-width:620px}
 
 /* ---- CIFRA ---- */
@@ -177,14 +184,6 @@ body.light #savePill{color:#fff}
   <div class="row"><div class="btn" id="bSave" style="flex:1">Salvar</div><div class="btn" id="bClear">Restaurar original</div></div>
 </div></div>
 
-<div class="ov" id="ovSec"><div class="oh"><h2 id="secTitle">Parte</h2><div class="btn" id="cSec">✕</div></div><div class="ob">
-  <div class="fld"><label>Nome da parte</label><input id="fName" placeholder="REFRÃO" autocapitalize="characters"></div>
-  <div class="fld"><label>Acordes</label><input id="fCh" class="ch" placeholder="Dm · G · Dm" autocapitalize="off" autocorrect="off" spellcheck="false">
-    <div class="pal" id="pal"></div></div>
-  <div class="fld"><label>Deixa da letra / observação</label><input id="fCue" placeholder="“Bela é o Recife…”"></div>
-  <div class="fld"><label>Etiqueta</label><input id="fRep" placeholder="repete · 4× · à vontade"></div>
-  <div class="row" style="margin-top:22px"><div class="btn" id="secSave" style="flex:1">Salvar parte</div><div class="btn mini del" id="secDel" style="height:44px">🗑 Excluir</div></div>
-</div></div>
 
 <div id="banner"></div>
 <div id="savePill"><span id="pillLbl"></span><span id="pillX">✕</span></div>
@@ -265,6 +264,7 @@ function banner(){
 let idx=Math.min(store.idx||0,SONGS.length-1), fs=store.fs||22, view=store.view||'st', talk=!!store.talk, emode=false;
 const $=i=>document.getElementById(i), stage=$('stage'), content=$('content');
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const escA=s=>esc(s).replace(/"/g,'&quot;');
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),1400)}
 
 /* ---- motor de acordes ---- */
@@ -294,29 +294,43 @@ function parseEstr(txt){
 /* ---- render ---- */
 function renderEstr(n){
   const s=cur(), secs=estr(idx);
-  if(!secs.length) return '<div class="empt">Sem estrutura ainda.<br><br><span class="btn" style="display:inline-flex" onclick="openEdit(\'st\')">+ Montar estrutura</span></div>';
+  if(!secs.length && !emode) return '<div class="empt">Sem estrutura ainda.<br><br><span class="btn" style="display:inline-flex" onclick="openEdit(\'st\')">+ Montar estrutura</span></div>';
   let h='';
-  if(s.sug) h='<div class="warn">Progressão <b>sugerida</b> — montada no tom do repertório, não é a cifra oficial. Confere de ouvido e corrige em ⚙︎ › Editar estrutura.</div>';
-  secs.forEach((sec,si)=>{
+  if(s.sug) h='<div class="warn">Progressão <b>sugerida</b> — montada no tom do repertório, não é a cifra oficial. Confere de ouvido e corrige aqui: toque em ✎ e edite as partes.</div>';
+
+  if(emode){                                   /* edição direto no card, sem abrir outra tela */
+    const pal=palette();
+    secs.forEach((sec,si)=>{
+      h+='<div class="sec ed" data-si="'+si+'">'
+       + '<input class="edin ed-name" value="'+escA(sec.s||'')+'" placeholder="NOME DA PARTE (REFRÃO…)" autocapitalize="characters" oninput="secLive('+si+')">'
+       + '<input class="edin ed-ch" value="'+escA(sec.c||'')+'" placeholder="Dm · G · Dm" autocapitalize="off" autocorrect="off" spellcheck="false" onfocus="palFocus('+si+')" oninput="secLive('+si+')">'
+       + '<div class="pal ed-pal" style="display:none">'+pal+'</div>'
+       + '<input class="edin ed-cue" value="'+escA(sec.q||'')+'" placeholder="deixa da letra / observação" oninput="secLive('+si+')">'
+       + '<input class="edin ed-rep" value="'+escA(sec.r||'')+'" placeholder="etiqueta: repete · 4× · à vontade" oninput="secLive('+si+')">'
+       + '<div class="secbar">'
+       + '<div class="mini" onclick="secMove('+si+',-1)">↑</div>'
+       + '<div class="mini" onclick="secMove('+si+',1)">↓</div>'
+       + '<div class="mini" onclick="secDup('+si+')">⧉</div>'
+       + '<div class="mini del" style="margin-left:auto" onclick="secRm('+si+')">🗑 excluir</div></div>'
+       + '</div>';
+      h+='<div class="addbar"><div class="mini" onclick="secAdd('+si+')">+ inserir parte aqui</div></div>';
+    });
+    if(!secs.length) h+='<div class="addbar"><div class="mini" onclick="secAdd(-1)">+ criar primeira parte</div></div>';
+    return h;
+  }
+
+  secs.forEach((sec,si)=>{                      /* modo leitura (palco) */
     const ch=sec.c.split(/\s+/).map(t=>{
       if(t==='·') return '<span class="sep">·</span>';
       if(t==='|') return '<span class="bar">|</span>';
       return isChord(t)?pretty(trTok(t,n)):pretty(t);
     }).join(' ');
-    h+='<div class="sec'+(emode?' ed':'')+'"'+(emode?' onclick="openSec('+si+')"':'')+'>'
+    h+='<div class="sec">'
      + '<div class="sname">'+esc(sec.s)+(sec.r?'<span class="rep">'+esc(sec.r)+'</span>':'')+'</div>'
      + '<div class="chords" style="font-size:'+Math.round(fs*1.25)+'px">'+ch+'</div>'
-     + (sec.q?'<div class="cue" style="font-size:'+Math.round(fs*.78)+'px">'+esc(sec.q)+'</div>':'');
-    if(emode) h+='<div class="secbar" onclick="event.stopPropagation()">'
-      + '<div class="mini" onclick="secMove('+si+',-1)">↑</div>'
-      + '<div class="mini" onclick="secMove('+si+',1)">↓</div>'
-      + '<div class="mini" onclick="secDup('+si+')">⧉</div>'
-      + '<div class="mini" onclick="secAdd('+si+')">+ parte</div>'
-      + '<div class="mini del" style="margin-left:auto" onclick="secRm('+si+')">🗑</div></div>';
-    h+='</div>';
-    if(emode) h+='<div class="addbar"><div class="mini" onclick="secAdd('+si+')">+ inserir parte aqui</div></div>';
+     + (sec.q?'<div class="cue" style="font-size:'+Math.round(fs*.78)+'px">'+esc(sec.q)+'</div>':'')
+     + '</div>';
   });
-  if(emode && !secs.length) h+='<div class="addbar"><div class="mini" onclick="secAdd(-1)">+ criar primeira parte</div></div>';
   return h;
 }
 function renderCifra(n){
@@ -378,13 +392,25 @@ function buildList(){
 }
 
 /* ---- editor de partes ---- */
-function setSecs(a){ store.estr[K(idx)]=JSON.stringify(a); SONGS[idx].sug=false; save(); render(); toast(STORAGE_OK?'✓ Salvo':'✓ Alterado (não salvo — ver aviso)'); }
+function setSecs(a){ store.estr[K(idx)]=JSON.stringify(a); SONGS[idx].sug=false; save(); render(); }
+/* edição ao vivo de um card: grava sem re-renderizar, pra o cursor não pular */
+window.secLive=si=>{
+  const card=document.querySelector('.sec[data-si="'+si+'"]'); if(!card) return;
+  const a=estr(idx);
+  a[si]={ s:card.querySelector('.ed-name').value.trim()||'PARTE',
+          c:card.querySelector('.ed-ch').value.trim(),
+          q:card.querySelector('.ed-cue').value.trim(),
+          r:card.querySelector('.ed-rep').value.trim()||null };
+  store.estr[K(idx)]=JSON.stringify(a); SONGS[idx].sug=false; save(); atualizarPub();
+};
+function focusSec(i){ const el=document.querySelector('.sec[data-si="'+i+'"] .ed-name');
+  if(el){ el.focus(); if(el.select) el.select(); el.scrollIntoView({block:'center'}); } }
 window.secMove=(i,d)=>{const a=estr(idx);const j=i+d;if(j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];setSecs(a)};
 window.secDup=i=>{const a=estr(idx);a.splice(i+1,0,JSON.parse(JSON.stringify(a[i])));setSecs(a)};
 window.secRm=i=>{const a=estr(idx);a.splice(i,1);setSecs(a)};
-window.secAdd=i=>{const a=estr(idx);a.splice(i+1,0,{s:'NOVA PARTE',c:'',q:'',r:null});setSecs(a);openSec(i+1)};
+window.secAdd=i=>{const a=estr(idx);a.splice(i+1,0,{s:'NOVA PARTE',c:'',q:'',r:null});setSecs(a);focusSec(i+1)};
 
-let secI=0;
+let curCh=null;   // input de acordes atualmente focado (alvo da paleta)
 const SHP=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 function palette(){
   const k=(cur().k||'C').split(/[^A-G#b m]/)[0].trim();
@@ -394,27 +420,17 @@ function palette(){
   const set = minor
     ? [st(0)+'m',st(3),st(5)+'m',st(7)+'m',st(7),st(7)+'7',st(8),st(10),st(2)+'°']
     : [st(0),st(2)+'m',st(4)+'m',st(5),st(7),st(7)+'7',st(9)+'m',st(10),st(0)+'7'];
-  return '<div class="mini sep" onclick="palPut(\'·\')">·</div><div class="mini sep" onclick="palPut(\'|\')">|</div>'
-   + set.map(c=>'<div class="mini" onclick="palPut(\''+c+'\')">'+c.replace(/b/,'♭').replace(/#/,'♯')+'</div>').join('')
-   + '<div class="mini sep" style="margin-left:auto" onclick="palDel()">⌫</div>';
+  const mnd=' onmousedown="event.preventDefault()"';   // não tira o foco do input de acordes
+  return '<div class="mini sep"'+mnd+' onclick="palPut(\'·\')">·</div><div class="mini sep"'+mnd+' onclick="palPut(\'|\')">|</div>'
+   + set.map(c=>'<div class="mini"'+mnd+' onclick="palPut(\''+c+'\')">'+c.replace(/b/,'♭').replace(/#/,'♯')+'</div>').join('')
+   + '<div class="mini sep" style="margin-left:auto"'+mnd+' onclick="palDel()">⌫</div>';
 }
-window.palPut=t=>{const f=$('fCh');f.value=(f.value.trim()+' '+t).trim();f.focus()};
-window.palDel=()=>{const f=$('fCh');f.value=f.value.trim().split(/\s+/).slice(0,-1).join(' ');f.focus()};
-window.openSec=i=>{
-  secI=i; const a=estr(idx), sec=a[i]||{s:'',c:'',q:'',r:''};
-  $('secTitle').textContent='Parte '+(i+1)+' de '+a.length+' — '+cur().t;
-  $('fName').value=sec.s||''; $('fCh').value=sec.c||''; $('fCue').value=sec.q||''; $('fRep').value=sec.r||'';
-  $('pal').innerHTML=palette();
-  $('ovSec').classList.add('show');
-};
-$('cSec').onclick=()=>$('ovSec').classList.remove('show');
-$('secSave').onclick=()=>{
-  const a=estr(idx);
-  a[secI]={s:$('fName').value.trim()||'PARTE', c:$('fCh').value.trim(), q:$('fCue').value.trim(), r:$('fRep').value.trim()||null};
-  $('ovSec').classList.remove('show'); setSecs(a);
-};
-$('secDel').onclick=()=>{const a=estr(idx);a.splice(secI,1);$('ovSec').classList.remove('show');setSecs(a)};
-
+window.palFocus=si=>{ curCh=document.querySelector('.sec[data-si="'+si+'"] .ed-ch');
+  document.querySelectorAll('.ed-pal').forEach(p=>p.style.display='none');
+  const pal=document.querySelector('.sec[data-si="'+si+'"] .ed-pal'); if(pal) pal.style.display='flex'; };
+function chSi(){ return curCh ? +curCh.closest('.sec').dataset.si : -1; }
+window.palPut=t=>{ if(!curCh)return; curCh.value=(curCh.value.trim()+' '+t).trim(); curCh.focus(); secLive(chSi()); };
+window.palDel=()=>{ if(!curCh)return; curCh.value=curCh.value.trim().split(/\s+/).slice(0,-1).join(' '); curCh.focus(); secLive(chSi()); };
 /* ---- ui ---- */
 $('bList').onclick=()=>{buildList();$('ovList').classList.add('show')};
 $('cList').onclick=()=>$('ovList').classList.remove('show');
@@ -423,7 +439,7 @@ $('cTools').onclick=()=>$('ovTools').classList.remove('show');
 $('cEdit').onclick=()=>$('ovEdit').classList.remove('show');
 $('bView').onclick=()=>{view=view==='st'?'ch':'st';render()};
 $('bTalk').onclick=()=>{talk=!talk;store.talk=talk;save();render();toast(talk?'Falas de palco visíveis':'Falas de palco ocultas')};
-$('bEdit').onclick=()=>{emode=!emode;render();toast(emode?'Modo edição — toque numa parte':'Edição encerrada')};
+$('bEdit').onclick=()=>{emode=!emode;render();toast(emode?'Modo edição — edite direto nos cards':'Edição encerrada')};
 $('prev').onclick=()=>go(-1); $('next').onclick=()=>go(1);
 
 let editMode='st';
@@ -592,7 +608,7 @@ stage.addEventListener('touchend',e=>{if(x0===null)return;
  const dx=e.changedTouches[0].clientX-x0,dy=e.changedTouches[0].clientY-y0;
  if(!emode&&Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.8)go(dx<0?1:-1);x0=null},{passive:true});
 document.addEventListener('keydown',e=>{
- if(document.activeElement&&document.activeElement.tagName==='TEXTAREA')return;
+ {const ae=document.activeElement, tg=ae&&ae.tagName; if(tg==='TEXTAREA'||tg==='INPUT')return;}
  if(e.key==='ArrowRight'||e.key==='PageDown')go(1);
  if(e.key==='ArrowLeft'||e.key==='PageUp')go(-1);
  if(e.key==='v'||e.key==='V'){view=view==='st'?'ch':'st';render()}

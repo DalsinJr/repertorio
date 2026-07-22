@@ -134,6 +134,11 @@ Cada música em `data/repertorio.json`:
 - `4_gerar_html.py` troca a linha `let SONGS=[...], LS='blackShow_v4';` por regex. A chave
   `LS='blackShow_v4'` é o âncora que marca o fim do bloco de dados — é única no arquivo.
   Se mudar essa linha, ajuste o padrão no script (ele aborta se não casar, não corrompe).
+- Edição da estrutura é **inline** no modo ✎ (não há mais overlay de parte). Cada card vira
+  inputs; `secLive(si)` grava no rascunho **sem re-renderizar** (senão o cursor pula). Só
+  operações estruturais (mover/duplicar/remover/inserir) chamam `render()` via `setSecs`.
+  A paleta de acordes escreve no input focado (`curCh`); os chips usam `onmousedown=preventDefault`
+  pra não tirar o foco. Guard do teclado ignora setas/espaço/`v` quando um INPUT está focado.
 - Transposição: `SH`/`FL` escolhem sustenido ou bemol pelo tom. Tom de F pede B♭, não A♯.
   O bVII sempre sai em bemol.
 - O swipe é desativado no modo de edição para não trocar de música sem querer.

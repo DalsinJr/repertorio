@@ -60,9 +60,11 @@ a visão.
 
 ## Editar
 
-Botão ✎ → cada parte ganha controles de mover (↑↓), duplicar (⧉), remover (🗑) e inserir.
-Tocando no card abre o editor com paleta dos acordes do tom da música — dá pra montar uma
-parte inteira sem teclado.
+Botão ✎ → a estrutura vira editável **na própria página**: cada parte é um card com campos
+de nome, acordes, deixa e etiqueta, mais controles de mover (↑↓), duplicar (⧉), remover (🗑)
+e inserir. Ao focar o campo de acordes aparece a paleta dos acordes do tom da música — dá
+pra montar uma parte inteira sem teclado. As mudanças ficam no rascunho na hora; publique
+com **☁️ Salvar**.
 
 ## Dados
 

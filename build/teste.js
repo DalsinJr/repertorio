@@ -33,6 +33,13 @@ const offline=ls=>baseEnv(win=>{Object.defineProperty(win,'localStorage',{config
 const tap=(w,e)=>{if(!e)throw new Error('faltou elemento');e.dispatchEvent(new w.MouseEvent('click',{bubbles:true}))};
 const ch=(w,n)=>w.document.querySelectorAll('#content .sec .chords')[n].textContent.replace(/\s+/g,' ').trim();
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
+// edita os acordes da parte `si` inline (o modo edição precisa estar ligado)
+function editCh(w,si,val){
+  const card=w.document.querySelector('.sec[data-si="'+si+'"]');
+  if(!card) throw new Error('card '+si+' não encontrado — modo edição ligado?');
+  const inp=card.querySelector('.ed-ch'); inp.value=val;
+  inp.dispatchEvent(new w.Event('input',{bubbles:true}));
+}
 let pass=true; const ok=(c,m)=>{console.log((c?'  ✅ ':'  ❌ ')+m); if(!c)pass=false;};
 
 (async()=>{
@@ -44,9 +51,10 @@ let pass=true; const ok=(c,m)=>{console.log((c?'  ✅ ':'  ❌ ')+m); if(!c)pass
   ok(!$('banner').classList.contains('show'),'sem banner quando o localStorage grava');
   ok($('hPos').textContent.split('/')[1]>0,'carregou as músicas do data/repertorio.json (fetch)');
 
-  tap(w,$('bEdit')); tap(w,w.document.querySelectorAll('#content .sec')[0]);
-  $('fCh').value='XX · YY'; tap(w,$('secSave'));
-  ok(ch(w,0)==='XX · YY','edição da parte aparece na tela');
+  tap(w,$('bEdit')); editCh(w,0,'XX · YY');
+  ok(w.document.querySelector('.sec[data-si="0"] .ed-ch').value==='XX · YY','edição inline no próprio card');
+  tap(w,$('bEdit'));   // sai do modo edição
+  ok(ch(w,0)==='XX · YY','edição aparece na estrutura');
 
   tap(w,$('bTools'));
   ok(/1 música/.test($('pubStatus').innerHTML),'status: 1 edição não publicada');
@@ -77,9 +85,8 @@ let pass=true; const ok=(c,m)=>{console.log((c?'  ✅ ':'  ❌ ')+m); if(!c)pass
   const d3=new JSDOM(html,semLS()), w3=d3.window, $3=i=>w3.document.getElementById(i);
   await wait(40);
   ok($3('banner').classList.contains('show'),'banner de aviso aparece quando não dá pra salvar');
-  tap(w3,$3('bEdit')); tap(w3,w3.document.querySelectorAll('#content .sec')[0]);
-  $3('fCh').value='ZZ · WW'; tap(w3,$3('secSave'));
-  ok(ch(w3,0)==='ZZ · WW','edição funciona na sessão mesmo sem armazenamento');
+  tap(w3,$3('bEdit')); editCh(w3,0,'ZZ · WW'); tap(w3,$3('bEdit'));
+  ok(ch(w3,0)==='ZZ · WW','edição inline funciona na sessão mesmo sem armazenamento');
 
   // ---------- E) salvar direto no GitHub (commit via API) ----------
   console.log('\nE) salvar direto no GitHub');
@@ -90,8 +97,7 @@ let pass=true; const ok=(c,m)=>{console.log((c?'  ✅ ':'  ❌ ')+m); if(!c)pass
   $E('ghToken').value='github_pat_teste'; tap(wE,$E('bTools')); tap(wE,$E('bGhSave'));
   ok(JSON.parse(lsE.getItem('blackShow_gh')).token==='github_pat_teste','token guardado no aparelho');
 
-  tap(wE,$E('bEdit')); tap(wE,wE.document.querySelectorAll('#content .sec')[0]);
-  $E('fCh').value='QQ · RR'; tap(wE,$E('secSave'));
+  tap(wE,$E('bEdit')); editCh(wE,0,'QQ · RR');
   ok($E('savePill').classList.contains('show'),'pill "Salvar" aparece com edição pendente');
 
   tap(wE,$E('bSalvarGh'));
@@ -101,21 +107,19 @@ let pass=true; const ok=(c,m)=>{console.log((c?'  ✅ ':'  ❌ ')+m); if(!c)pass
   ok(enviado.includes('QQ · RR'),'o JSON enviado ao GitHub contém a edição');
   ok(JSON.parse(enviado).musicas.some(m=>m.bl),'JSON enviado preserva o campo bl');
   ok(!$E('savePill').classList.contains('show'),'pill some após salvar (rascunho limpo)');
-  ok(ch(wE,0)==='QQ · RR','edição continua na tela após salvar (adotada como base)');
+  tap(wE,$E('bEdit'));   // sai do modo edição
+  ok(ch(wE,0)==='QQ · RR','edição continua na estrutura após salvar (adotada como base)');
 
   // ---------- F) dispensar o pill com o ✕ ----------
   console.log('\nF) dispensar o lembrete de salvar');
   const lsF=memLS();
   const dF=new JSDOM(html,comLS(lsF)), wF=dF.window, $F=i=>wF.document.getElementById(i);
   await wait(40);
-  tap(wF,$F('bEdit')); tap(wF,wF.document.querySelectorAll('#content .sec')[0]);
-  $F('fCh').value='DD · EE'; tap(wF,$F('secSave'));
+  tap(wF,$F('bEdit')); editCh(wF,0,'DD · EE');
   ok($F('savePill').classList.contains('show'),'pill aparece após editar');
   tap(wF,$F('pillX'));
   ok(!$F('savePill').classList.contains('show'),'✕ oculta o pill');
-  // outra edição na mesma sessão não força o pill de volta (segue oculto)
-  tap(wF,wF.document.querySelectorAll('#content .sec')[1]);
-  $F('fCh').value='FF · GG'; tap(wF,$F('secSave'));
+  editCh(wF,0,'FF · GG');   // outra edição na mesma sessão: segue oculto
   ok(!$F('savePill').classList.contains('show'),'depois de dispensado, segue oculto na sessão');
 
   console.log('\n'+(pass?'✅ TODOS OS TESTES PASSARAM':'❌ HÁ FALHAS'));
