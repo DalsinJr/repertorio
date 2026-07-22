@@ -103,6 +103,21 @@ let pass=true; const ok=(c,m)=>{console.log((c?'  ✅ ':'  ❌ ')+m); if(!c)pass
   ok(!$E('savePill').classList.contains('show'),'pill some após salvar (rascunho limpo)');
   ok(ch(wE,0)==='QQ · RR','edição continua na tela após salvar (adotada como base)');
 
+  // ---------- F) dispensar o pill com o ✕ ----------
+  console.log('\nF) dispensar o lembrete de salvar');
+  const lsF=memLS();
+  const dF=new JSDOM(html,comLS(lsF)), wF=dF.window, $F=i=>wF.document.getElementById(i);
+  await wait(40);
+  tap(wF,$F('bEdit')); tap(wF,wF.document.querySelectorAll('#content .sec')[0]);
+  $F('fCh').value='DD · EE'; tap(wF,$F('secSave'));
+  ok($F('savePill').classList.contains('show'),'pill aparece após editar');
+  tap(wF,$F('pillX'));
+  ok(!$F('savePill').classList.contains('show'),'✕ oculta o pill');
+  // outra edição na mesma sessão não força o pill de volta (segue oculto)
+  tap(wF,wF.document.querySelectorAll('#content .sec')[1]);
+  $F('fCh').value='FF · GG'; tap(wF,$F('secSave'));
+  ok(!$F('savePill').classList.contains('show'),'depois de dispensado, segue oculto na sessão');
+
   console.log('\n'+(pass?'✅ TODOS OS TESTES PASSARAM':'❌ HÁ FALHAS'));
   process.exit(pass?0:1);
 })();
