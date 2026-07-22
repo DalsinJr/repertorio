@@ -1,6 +1,6 @@
 {
  "v": 5,
- "atualizado": "2026-07-21T20:16:51",
+ "atualizado": "2026-07-22T12:15:04.834Z",
  "musicas": [
   {
    "id": "alegria-demais",
@@ -16,12 +16,6 @@
      "s": "INTRO",
      "c": "Bb · F · C · Dm · Cm · Bb · F | Bb · F · C · Db · F · Bb · F · C · F",
      "q": "tema de abertura",
-     "r": null
-    },
-    {
-     "s": "VERSO",
-     "c": "Bb · F | Gm · F | Bb · Am · F | G · C · F",
-     "q": "“Gratidão por você ter chegado…”",
      "r": null
     },
     {
@@ -57,12 +51,6 @@
    "bl": "1ª PARTE",
    "sug": false,
    "st": [
-    {
-     "s": "INTRO",
-     "c": "Bb · Am · G · C · F | Bb · Am · Gm · C · F",
-     "q": "tema da sanfona",
-     "r": null
-    },
     {
      "s": "VERSO",
      "c": "Bb · Am · Gm · F",
@@ -1498,8 +1486,5 @@
    "sk": [],
    "tr": 0
   }
- ],
- "cifra": {},
- "estr": {},
- "tr": {}
+ ]
 }
